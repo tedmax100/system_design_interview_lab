@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leaderboard-app-rdb
+  namespace: leaderboard
+  labels:
+    app: leaderboard
+    scenario: rdb-only
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: leaderboard
+      scenario: rdb-only
+  template:
+    metadata:
+      labels:
+        app: leaderboard
+        scenario: rdb-only
+    spec:
+      containers:
+      - name: app
+        image: leaderboard-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: USE_REDIS
+          value: "false"
+        - name: DATABASE_URL
+          value: "postgres://postgres:postgres123@postgresql:5432/leaderboard?sslmode=disable"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leaderboard-app-redis
+  namespace: leaderboard
+  labels:
+    app: leaderboard
+    scenario: with-redis
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: leaderboard
+      scenario: with-redis
+  template:
+    metadata:
+      labels:
+        app: leaderboard
+        scenario: with-redis
+    spec:
+      containers:
+      - name: app
+        image: leaderboard-app:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+        env:
+        - name: USE_REDIS
+          value: "true"
+        - name: DATABASE_URL
+          value: "postgres://postgres:postgres123@postgresql:5432/leaderboard?sslmode=disable"
+        - name: REDIS_ADDR
+          value: "valkey:6379"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboard-service-rdb
+  namespace: leaderboard
+spec:
+  selector:
+    app: leaderboard
+    scenario: rdb-only
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboard-service-redis
+  namespace: leaderboard
+spec:
+  selector:
+    app: leaderboard
+    scenario: with-redis
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP

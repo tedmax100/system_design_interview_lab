@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: leaderboard
+data:
+  init.sql: |
+    -- 建立資料庫
+    CREATE DATABASE leaderboard;
+    \c leaderboard;
+    
+    -- 用戶表
+    CREATE TABLE users (
+      user_id VARCHAR(50) PRIMARY KEY,
+      username VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- 分數歷史表
+    CREATE TABLE score_history (
+      id SERIAL PRIMARY KEY,
+      user_id VARCHAR(50) NOT NULL,
+      match_id VARCHAR(50) UNIQUE NOT NULL,
+      points INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
+    );
+    
+    -- 月度排行榜表
+    CREATE TABLE monthly_leaderboard (
+      user_id VARCHAR(50) NOT NULL,
+      score INTEGER NOT NULL DEFAULT 0,
+      month VARCHAR(7) NOT NULL, -- YYYY-MM format
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, month)
+    );
+    
+    -- 建立索引
+    CREATE INDEX idx_monthly_score ON monthly_leaderboard(month, score DESC);
+    CREATE INDEX idx_score_history_user ON score_history(user_id);
+    
+    -- Top 10 視圖（用於快速查詢）
+    CREATE MATERIALIZED VIEW top10_current_month AS
+    SELECT 
+      user_id,
+      score,
+      RANK() OVER (ORDER BY score DESC) as rank
+    FROM monthly_leaderboard
+    WHERE month = TO_CHAR(CURRENT_DATE, 'YYYY-MM')
+    ORDER BY score DESC
+    LIMIT 10;
+    
+    -- 自動更新視圖的函數
+    CREATE OR REPLACE FUNCTION refresh_top10()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      REFRESH MATERIALIZED VIEW CONCURRENTLY top10_current_month;
+      RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+    
+    -- 觸發器
+    CREATE TRIGGER refresh_top10_trigger
+    AFTER INSERT OR UPDATE ON monthly_leaderboard
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION refresh_top10();
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: leaderboard
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:17-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres123"
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgres-init
+        configMap:
+          name: postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+  namespace: leaderboard
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: postgresql
