@@ -34,8 +34,36 @@ kubectl apply -f ../k8s/namespace.yaml
 echo "Deploying PostgreSQL 17..."
 kubectl apply -f ../k8s/postgresql/
 
-echo "Waiting for PostgreSQL to be ready..."
-kubectl wait --for=condition=ready pod -l app=postgresql -n $NAMESPACE --timeout=180s
+echo "Waiting for PostgreSQL pod to start..."
+kubectl wait --for=condition=ready pod -l app=postgresql -n $NAMESPACE --timeout=300s
+
+echo ""
+echo "========================================="
+echo "PostgreSQL is initializing..."
+echo "========================================="
+echo "This will take 5-8 minutes because:"
+echo "  1. Creating database schema"
+echo "  2. Inserting 50,000 users"
+echo "  3. Creating leaderboard records"
+echo "  4. Generating ~25M match history records"
+echo ""
+echo "Please wait... ⏳"
+echo ""
+
+# Wait for PostgreSQL to finish initialization
+# The init script is heavy, so we need to wait longer
+sleep 180
+
+# Check if initialization is complete by trying to connect
+echo "Verifying database initialization..."
+for i in {1..10}; do
+  if kubectl exec -n $NAMESPACE postgresql-0 -- psql -U postgres -d leaderboard -c "SELECT COUNT(*) FROM users;" > /dev/null 2>&1; then
+    echo "✅ Database initialization complete!"
+    break
+  fi
+  echo "Still initializing... (attempt $i/10)"
+  sleep 30
+done
 
 # Build and deploy application (RDB-only version)
 echo "Building application..."
@@ -78,19 +106,36 @@ kubectl apply -f k8s/monitoring/grafana-dashboard.yaml
 
 echo ""
 echo "========================================="
-echo "Deployment Complete!"
+echo "🎉 Deployment Complete!"
 echo "========================================="
 echo ""
-echo "Service endpoints:"
+echo "📊 Database initialized with:"
+echo "  ✅ 50,000 users (player_1 to player_50000)"
+echo "  ✅ 50,000 leaderboard records"
+echo "  ✅ ~25 million match history records"
+echo ""
+echo "🔗 Service endpoints:"
 echo "  Leaderboard API: kubectl port-forward -n $NAMESPACE svc/leaderboard-service-rdb 8080:80"
 echo "  Prometheus: http://localhost:30090"
 echo "  Grafana: http://localhost:30300 (admin/admin)"
 echo ""
-echo "To run load tests:"
-echo "  1. Port-forward the service: kubectl port-forward -n $NAMESPACE svc/leaderboard-service-rdb 8080:80"
-echo "  2. Initialize test data: k6 run k6/init-data.js"
-echo "  3. Run load test: k6 run k6/scenario1-rdb.js"
+echo "🧪 To run load tests:"
+echo "  1. Port-forward the service:"
+echo "     kubectl port-forward -n $NAMESPACE svc/leaderboard-service-rdb 8080:80"
 echo ""
-echo "To view logs:"
+echo "  2. Run load test (data already initialized!):"
+echo "     k6 run k6/scenario1-rdb.js"
+echo ""
+echo "  3. (Optional) Add 50K more users for extreme scenario:"
+echo "     k6 run k6/init-data.js"
+echo ""
+echo "📈 To view results:"
+echo "  Open Grafana: http://localhost:30300"
+echo "  Dashboard: 'Leaderboard Performance - RDB Only'"
+echo ""
+echo "📝 To view logs:"
 echo "  kubectl logs -f -l app=leaderboard,scenario=rdb-only -n $NAMESPACE"
+echo ""
+echo "📚 See version_1/QUICKSTART.md for detailed instructions"
+echo "📊 See version_1/DATA_SCALE.md for performance analysis"
 echo ""

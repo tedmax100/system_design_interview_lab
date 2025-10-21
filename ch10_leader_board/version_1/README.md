@@ -19,6 +19,80 @@ Client -> Leaderboard Service -> PostgreSQL
 - **Monitoring**: Prometheus + Grafana
 - **Load Testing**: k6
 
+
+  ✅ 核心應用程式 (Go 1.25)
+
+  - src/cmd/main.go - 主程式入口，包含 HTTP 路由和 Prometheus metrics 端點 (src/cmd/main.go:1)
+  - src/internal/repository/postgres.go - PostgreSQL 資料存取層，實作了三個核心功能 (src/internal/repository/postgres.go:1)
+    - UpdateScore() - 更新分數（含冪等性檢查）
+    - GetTopN() - 查詢 Top 10（展示 RANK() OVER 的性能問題）
+    - GetUserRank() - 查詢用戶排名（展示 COUNT(*) 的性能問題）
+  - src/internal/handler/handler.go - HTTP API handlers (src/internal/handler/handler.go:1)
+  - src/internal/middleware/metrics.go - Prometheus metrics 中間件 (src/internal/middleware/metrics.go:1)
+
+  ✅ Kubernetes 基礎設施
+
+  - PostgreSQL 17 - StatefulSet 配置，包含初始化 SQL schema (k8s/postgresql/deployment.yaml:1)
+  - Application Deployment - 包含 RDB-only 和 Redis 兩種模式 (k8s/app/deployment.yaml:1)
+  - ServiceMonitor - Prometheus 自動抓取 metrics (k8s/app/servicemonitor.yaml:1)
+  - Grafana Dashboard - 可視化性能指標的 dashboard (k8s/monitoring/grafana-dashboard.yaml:1)
+
+  ✅ 負載測試腳本 (k6)
+
+  - k6/init-data.js - 初始化 1000 個用戶的測試資料 (k6/init-data.js:1)
+  - k6/scenario1-rdb.js - 完整的負載測試場景，模擬真實流量 (k6/scenario1-rdb.js:1)
+    - 70% 更新分數
+    - 15% 查詢 Top 10
+    - 15% 查詢用戶排名
+
+  ✅ 部署與文檔
+
+  - version_1/deploy.sh - 一鍵部署腳本 (version_1/deploy.sh:1)
+  - version_1/test-api.sh - API 功能測試腳本 (version_1/test-api.sh:1)
+  - version_1/README.md - 詳細的使用文檔 (version_1/README.md:1)
+  - version_1/QUICKSTART.md - 快速啟動指南 (version_1/QUICKSTART.md:1)
+  - version_1/STRUCTURE.md - 專案結構說明 (version_1/STRUCTURE.md:1)
+
+  🚀 如何使用
+
+  # 1. 進入 version_1 目錄
+  cd version_1
+
+  # 2. 給予執行權限
+  chmod +x deploy.sh test-api.sh
+
+  # 3. 執行部署（約 3-5 分鐘）
+  ./deploy.sh
+
+  # 4. Port-forward 服務（新終端）
+  kubectl port-forward -n leaderboard svc/leaderboard-service-rdb 8080:80
+
+  # 5. 初始化測試資料
+  k6 run k6/init-data.js
+
+  # 6. 執行負載測試
+  k6 run k6/scenario1-rdb.js
+
+  # 7. 訪問 Grafana 查看結果
+  open http://localhost:30300  # (admin/admin)
+
+  🎯 預期效果
+
+  在 Grafana Dashboard 中，你會看到：
+
+  - ✅ POST /v1/scores - 快速（P95 ~30-50ms）
+  - ⚠️ GET /v1/scores - 中等（P95 ~100-200ms）- 超標 2-4x
+  - ❌ GET /v1/scores/{user_id} - 很慢（P95 ~500-2000ms）- 超標 5-20x
+
+  這證明了 PostgreSQL 在排行榜場景下的性能瓶頸！
+
+  📊 關鍵技術亮點
+
+  1. 展示 SQL 性能問題 - 使用真實的 SQL 查詢展示 O(N²) 的性能惡化
+  2. 完整的可觀測性 - Prometheus + Grafana 可視化所有關鍵指標
+  3. 生產級設計 - 包含冪等性、錯誤處理、健康檢查
+  4. 真實負載測試 - k6 模擬 2500 QPS 的峰值流量
+
 ## 性能問題演示
 
 Version 1 實作了以下三個 API，並展示了 SQL 在排行榜場景下的性能瓶頸：

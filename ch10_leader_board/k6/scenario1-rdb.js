@@ -37,9 +37,10 @@ export const options = {
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 
-// Generate random user IDs
+// Generate random user IDs from the existing 50,000 users
 function randomUser() {
-  const userId = `user_${Math.floor(Math.random() * 10000)}`;
+  // 從 player_1 到 player_50000 隨機選擇
+  const userId = `player_${Math.floor(Math.random() * 50000) + 1}`;
   return userId;
 }
 
