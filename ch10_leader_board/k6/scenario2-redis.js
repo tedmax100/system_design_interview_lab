@@ -11,7 +11,7 @@ const getUserRankDuration = new Trend('get_user_rank_duration');
 // Test configuration
 export const options = {
   scenarios: {
-    // Scenario 1: Ramp up to peak load
+    // Scenario 2: Same load as Scenario 1, but with Redis cache
     ramp_up: {
       executor: 'ramping-vus',
       startVUs: 0,
@@ -35,7 +35,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8082';
 
 // Generate random user IDs from the existing 50,000 users
 function randomUser() {
@@ -107,7 +107,7 @@ export default function () {
     }) || errorRate.add(1);
 
   } else {
-    // 15% - Get user rank (heavy operation in RDB)
+    // 15% - Get user rank (much faster with Redis)
     const userId = randomUser();
     const params = {
       tags: { name: 'GetUserRank' },
@@ -130,14 +130,14 @@ export default function () {
 export function handleSummary(data) {
   return {
     'stdout': textSummary(data, { indent: ' ', enableColors: true }),
-    'summary-scenario1.json': JSON.stringify(data, null, 2),
+    'summary-scenario2.json': JSON.stringify(data, null, 2),
   };
 }
 
 // Helper function for text summary
 function textSummary(data, options) {
   let output = '\n';
-  output += '======== Scenario 1: PostgreSQL Only - Load Test Results ========\n\n';
+  output += '======== Scenario 2: PostgreSQL + Valkey - Load Test Results ========\n\n';
 
   output += 'Test Summary:\n';
   output += `  Total Requests: ${data.metrics.http_reqs?.values?.count || 0}\n`;
@@ -152,7 +152,7 @@ function textSummary(data, options) {
   output += `  Get Leaderboard P95: ${data.metrics.get_leaderboard_duration?.values?.['p(95)']?.toFixed(2) || 0}ms\n`;
   output += `  Get User Rank P95: ${data.metrics.get_user_rank_duration?.values?.['p(95)']?.toFixed(2) || 0}ms\n\n`;
 
-  output += '==================================================================\n';
+  output += '======================================================================\n';
 
   return output;
 }

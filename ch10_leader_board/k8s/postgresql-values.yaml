@@ -1,0 +1,122 @@
+auth:
+  postgresPassword: "postgres123"
+  username: "postgres"
+  password: "postgres123"
+  database: "leaderboard"
+
+primary:
+  configuration: |
+    listen_addresses = '*'
+    max_connections = 100
+    shared_buffers = 128MB
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+  persistence:
+    enabled: false  # 使用 emptyDir，每次重啟都是乾淨的環境
+
+  initdb:
+    scripts:
+      init.sql: |
+        -- 用戶表
+        CREATE TABLE users (
+          user_id VARCHAR(50) PRIMARY KEY,
+          username VARCHAR(100) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 分數歷史表
+        CREATE TABLE score_history (
+          id SERIAL PRIMARY KEY,
+          user_id VARCHAR(50) NOT NULL,
+          match_id VARCHAR(50) UNIQUE NOT NULL,
+          points INTEGER NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+
+        -- 月度排行榜表
+        CREATE TABLE monthly_leaderboard (
+          user_id VARCHAR(50) NOT NULL,
+          score INTEGER NOT NULL DEFAULT 0,
+          month VARCHAR(7) NOT NULL, -- YYYY-MM format
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (user_id, month)
+        );
+
+        -- 建立索引
+        CREATE INDEX idx_monthly_score ON monthly_leaderboard(month, score DESC);
+        CREATE INDEX idx_score_history_user ON score_history(user_id);
+
+        -- Top 10 視圖（用於快速查詢）
+        CREATE MATERIALIZED VIEW top10_current_month AS
+        SELECT
+          user_id,
+          score,
+          RANK() OVER (ORDER BY score DESC) as rank
+        FROM monthly_leaderboard
+        WHERE month = TO_CHAR(CURRENT_DATE, 'YYYY-MM')
+        ORDER BY score DESC
+        LIMIT 10;
+
+        -- Create unique index for concurrent refresh
+        CREATE UNIQUE INDEX idx_top10_user_id ON top10_current_month(user_id);
+
+        -- 自動更新視圖的函數
+        CREATE OR REPLACE FUNCTION refresh_top10()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          REFRESH MATERIALIZED VIEW CONCURRENTLY top10_current_month;
+          RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        -- 觸發器
+        CREATE TRIGGER refresh_top10_trigger
+        AFTER INSERT OR UPDATE ON monthly_leaderboard
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION refresh_top10();
+
+        -- ====================================================
+        -- 預填充 50,000 筆測試資料
+        -- 目的：展示 PostgreSQL 在排行榜場景的性能問題
+        -- ====================================================
+
+        -- 1. 建立 50,000 個用戶
+        INSERT INTO users (user_id, username)
+        SELECT
+          'player_' || i,
+          'Player ' || i
+        FROM generate_series(1, 50000) AS i;
+
+        -- 2. 為每個用戶建立當月排行榜記錄，分數為 1-1000 的隨機值
+        INSERT INTO monthly_leaderboard (user_id, score, month)
+        SELECT
+          'player_' || i,
+          floor(random() * 1000 + 1)::int,
+          TO_CHAR(CURRENT_DATE, 'YYYY-MM')
+        FROM generate_series(1, 50000) AS i;
+
+        -- 3. 為每個用戶建立對應的分數歷史記錄（模擬贏得比賽的記錄）
+        -- 每個用戶的歷史記錄數等於他的分數
+        INSERT INTO score_history (user_id, match_id, points)
+        SELECT
+          ml.user_id,
+          ml.user_id || '_match_' || s,
+          1
+        FROM monthly_leaderboard ml
+        CROSS JOIN LATERAL generate_series(1, ml.score) AS s
+        WHERE ml.month = TO_CHAR(CURRENT_DATE, 'YYYY-MM');
+
+        -- 4. 重新整理 materialized view
+        REFRESH MATERIALIZED VIEW top10_current_month;
+
+        -- 5. 分析表以更新統計資訊（幫助查詢優化器）
+        ANALYZE users;
+        ANALYZE monthly_leaderboard;
+        ANALYZE score_history;

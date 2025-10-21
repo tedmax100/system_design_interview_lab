@@ -30,13 +30,12 @@ data:
 
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: valkey
   namespace: leaderboard
 spec:
-  serviceName: valkey
-  replicas: 2  # 1 主 1 從
+  replicas: 1
   selector:
     matchLabels:
       app: valkey
@@ -69,14 +68,8 @@ spec:
       - name: valkey-config
         configMap:
           name: valkey-config
-  volumeClaimTemplates:
-  - metadata:
-      name: valkey-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
+      - name: valkey-data
+        emptyDir: {}
 
 ---
 apiVersion: v1

@@ -41,7 +41,7 @@ data:
     
     -- Top 10 視圖（用於快速查詢）
     CREATE MATERIALIZED VIEW top10_current_month AS
-    SELECT 
+    SELECT
       user_id,
       score,
       RANK() OVER (ORDER BY score DESC) as rank
@@ -49,7 +49,10 @@ data:
     WHERE month = TO_CHAR(CURRENT_DATE, 'YYYY-MM')
     ORDER BY score DESC
     LIMIT 10;
-    
+
+    -- Create unique index for concurrent refresh
+    CREATE UNIQUE INDEX idx_top10_user_id ON top10_current_month(user_id);
+
     -- 自動更新視圖的函數
     CREATE OR REPLACE FUNCTION refresh_top10()
     RETURNS TRIGGER AS $$
@@ -58,7 +61,7 @@ data:
       RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
-    
+
     -- 觸發器
     CREATE TRIGGER refresh_top10_trigger
     AFTER INSERT OR UPDATE ON monthly_leaderboard
@@ -106,12 +109,11 @@ data:
 
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: postgresql
   namespace: leaderboard
 spec:
-  serviceName: postgresql
   replicas: 1
   selector:
     matchLabels:
@@ -123,7 +125,7 @@ spec:
     spec:
       containers:
       - name: postgresql
-        image: postgres:17-alpine
+        image: postgres:16
         ports:
         - containerPort: 5432
         env:
@@ -146,17 +148,11 @@ spec:
             memory: "1Gi"
             cpu: "1000m"
       volumes:
+      - name: postgres-storage
+        emptyDir: {}
       - name: postgres-init
         configMap:
           name: postgres-init
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-storage
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 5Gi
 
 ---
 apiVersion: v1

@@ -1,0 +1,45 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: leaderboard-demo
+servers: 1
+agents: 0
+image: rancher/k3s:v1.31.5-k3s1
+
+# Port mappings
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8443:443
+    nodeFilters:
+      - loadbalancer
+  - port: 30300:30300  # Grafana
+    nodeFilters:
+      - server:0
+  - port: 30090:30090  # Prometheus
+    nodeFilters:
+      - server:0
+  - port: 8081:30081   # Leaderboard RDB
+    nodeFilters:
+      - server:0
+  - port: 8082:30082   # Leaderboard Redis
+    nodeFilters:
+      - server:0
+
+# Volume mounts
+volumes:
+  - volume: ${PWD}/data:/data
+    nodeFilters:
+      - all
+
+# k3s options
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

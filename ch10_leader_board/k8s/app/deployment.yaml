@@ -92,7 +92,8 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: ClusterIP
+    nodePort: 30081
+  type: NodePort
 
 ---
 apiVersion: v1
@@ -107,4 +108,5 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-  type: ClusterIP
+    nodePort: 30082
+  type: NodePort

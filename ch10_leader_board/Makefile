@@ -15,15 +15,8 @@ setup:
 
 cluster:
 	@echo "Creating k3d cluster..."
-	k3d cluster create $(CLUSTER_NAME) \
-		--servers 1 \
-		--agents 3 \
-		--port "8080:80@loadbalancer" \
-		--port "8443:443@loadbalancer" \
-		--port "30000-32767:30000-32767@server:0" \
-		--volume "$(PWD)/data:/data" \
-		--k3s-arg "--disable=traefik@server:0"
-	
+	k3d cluster create --config k3d-config.yaml
+
 	@echo "Waiting for cluster to be ready..."
 	kubectl wait --for=condition=ready node --all --timeout=60s
 
@@ -48,8 +41,11 @@ deploy-monitoring:
 		--set prometheus.service.nodePort=30090
 
 deploy-postgresql:
-	@echo "Deploying PostgreSQL 17..."
-	kubectl apply -f k8s/postgresql/
+	@echo "Deploying PostgreSQL via Helm..."
+	helm upgrade --install postgresql bitnami/postgresql \
+		--namespace $(NAMESPACE) \
+		--values k8s/postgresql-values.yaml \
+		--wait --timeout 5m
 
 deploy-valkey:
 	@echo "Deploying Valkey..."
@@ -63,14 +59,12 @@ deploy-app:
 
 test-scenario1:
 	@echo "Running Scenario 1: RDB Only"
-	kubectl port-forward -n $(NAMESPACE) svc/leaderboard-service 8080:80 &
-	sleep 5
+	@echo "Service available at http://localhost:8081"
 	k6 run k6/scenario1-rdb.js
 
 test-scenario2:
 	@echo "Running Scenario 2: With Valkey"
-	kubectl port-forward -n $(NAMESPACE) svc/leaderboard-service 8080:80 &
-	sleep 5
+	@echo "Service available at http://localhost:8082"
 	k6 run k6/scenario2-redis.js
 
 clean:
