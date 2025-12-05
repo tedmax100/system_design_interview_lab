@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"leader_board/internal/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -40,30 +42,81 @@ func main() {
 	if err != nil {
 		log.Fatalf("Database not available after retries: %v", err)
 	}
-
 	log.Println("Successfully connected to PostgreSQL")
 
-	// Initialize repository (Version 1: PostgreSQL only)
-	repo := repository.NewPostgresRepository(db)
+	// Initialize PostgreSQL repository (for v1 endpoints)
+	postgresRepo := repository.NewPostgresRepository(db)
 
-	// Initialize handler
-	h := handler.NewHandler(repo)
+	// Initialize v1 handler (PostgreSQL only)
+	h := handler.NewHandler(postgresRepo)
 
 	// Setup router
 	r := mux.NewRouter()
 
-	// API routes
-	api := r.PathPrefix("/v1").Subrouter()
-	api.Use(middleware.MetricsMiddleware)
+	// ============================================
+	// v1 API routes - PostgreSQL only (Scenario 1)
+	// ============================================
+	apiV1 := r.PathPrefix("/v1").Subrouter()
+	apiV1.Use(middleware.MetricsMiddleware)
 
-	// Score update endpoint
-	api.HandleFunc("/scores", h.UpdateScore).Methods("POST")
+	apiV1.HandleFunc("/scores", h.UpdateScore).Methods("POST")
+	apiV1.HandleFunc("/scores", h.GetLeaderboard).Methods("GET")
+	apiV1.HandleFunc("/scores/{user_id}", h.GetUserRank).Methods("GET")
 
-	// Get top 10 leaderboard
-	api.HandleFunc("/scores", h.GetLeaderboard).Methods("GET")
+	// ============================================
+	// v2 API routes - Redis + PostgreSQL (Scenario 2)
+	// ============================================
+	// Connect to Redis/Valkey
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
 
-	// Get specific user rank
-	api.HandleFunc("/scores/{user_id}", h.GetUserRank).Methods("GET")
+	// Test Redis connection with retry
+	ctx := context.Background()
+	for i := 0; i < maxRetries; i++ {
+		_, err = redisClient.Ping(ctx).Result()
+		if err == nil {
+			break
+		}
+		log.Printf("Waiting for Redis... (attempt %d/%d): %v", i+1, maxRetries, err)
+		time.Sleep(3 * time.Second)
+	}
+
+	var hV2 *handler.HandlerV2
+	if err != nil {
+		log.Printf("Warning: Redis not available, v2 endpoints will fallback to PostgreSQL only: %v", err)
+		// Create hybrid repo that will always fallback to PostgreSQL
+		redisRepo := repository.NewRedisRepository(redisClient)
+		hybridRepo := repository.NewHybridRepository(redisRepo, postgresRepo)
+		hV2 = handler.NewHandlerV2(hybridRepo)
+	} else {
+		log.Println("Successfully connected to Redis")
+
+		// Initialize Redis repository
+		redisRepo := repository.NewRedisRepository(redisClient)
+
+		// Initialize Hybrid repository
+		hybridRepo := repository.NewHybridRepository(redisRepo, postgresRepo)
+
+		// Warm cache from PostgreSQL at startup
+		go func() {
+			if err := hybridRepo.WarmCache(db); err != nil {
+				log.Printf("Warning: Cache warming failed: %v", err)
+			}
+		}()
+
+		// Initialize v2 handler
+		hV2 = handler.NewHandlerV2(hybridRepo)
+	}
+
+	apiV2 := r.PathPrefix("/v2").Subrouter()
+	apiV2.Use(middleware.MetricsMiddleware)
+
+	apiV2.HandleFunc("/scores", hV2.UpdateScore).Methods("POST")
+	apiV2.HandleFunc("/scores", hV2.GetLeaderboard).Methods("GET")
+	apiV2.HandleFunc("/scores/{user_id}", hV2.GetUserRank).Methods("GET")
 
 	// Health check
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +130,8 @@ func main() {
 	// Start server
 	port := 8080
 	addr := fmt.Sprintf(":%d", port)
-	log.Printf("Starting server on %s (PostgreSQL-only mode)", addr)
+	log.Printf("Starting server on %s", addr)
+	log.Println("  - v1 endpoints: PostgreSQL only (Scenario 1)")
+	log.Println("  - v2 endpoints: Redis + PostgreSQL hybrid (Scenario 2)")
 	log.Fatal(http.ListenAndServe(addr, r))
 }
