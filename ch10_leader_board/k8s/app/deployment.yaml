@@ -30,6 +30,8 @@ spec:
           value: "tempo:4317"
         - name: ENVIRONMENT
           value: "demo"
+        - name: OTEL_GO_AUTO_ENABLED
+          value: "false"
         resources:
           requests:
             memory: "128Mi"
