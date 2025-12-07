@@ -15,7 +15,7 @@ var (
 			Name: "http_requests_total",
 			Help: "Total number of HTTP requests",
 		},
-		[]string{"method", "endpoint", "status"},
+		[]string{"method", "endpoint", "status", "scenario"},
 	)
 
 	httpRequestDuration = promauto.NewHistogramVec(
@@ -24,7 +24,7 @@ var (
 			Help:    "HTTP request latency in seconds",
 			Buckets: prometheus.DefBuckets,
 		},
-		[]string{"method", "endpoint"},
+		[]string{"method", "endpoint", "scenario"},
 	)
 
 	// Custom buckets for better visualization of slow queries
@@ -48,6 +48,13 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+func normalizePathForMetrics(path string) string {
+	if len(path) > 11 && (path[:11] == "/v1/scores/" || path[:11] == "/v2/scores/") {
+		return path[:11] + "{user_id}"
+	}
+	return path
+}
+
 // MetricsMiddleware records HTTP request metrics
 func MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -64,17 +71,23 @@ func MetricsMiddleware(next http.Handler) http.Handler {
 
 		// Record metrics
 		duration := time.Since(start).Seconds()
-		endpoint := r.URL.Path
+		endpoint := normalizePathForMetrics(r.URL.Path)
+		scenario := r.Header.Get("X-Scenario")
+		if scenario == "" {
+			scenario = "unknown"
+		}
 
 		httpRequestsTotal.WithLabelValues(
 			r.Method,
 			endpoint,
 			strconv.Itoa(rw.statusCode),
+			scenario,
 		).Inc()
 
 		httpRequestDuration.WithLabelValues(
 			r.Method,
 			endpoint,
+			scenario,
 		).Observe(duration)
 	})
 }

@@ -20,12 +20,9 @@ ports:
   - port: 30090:30090  # Prometheus
     nodeFilters:
       - server:0
-  - port: 8081:30081   # Leaderboard RDB
+  - port: 30080:30080  # Leaderboard App (unified)
     nodeFilters:
-      - server:0
-  - port: 8082:30082   # Leaderboard Redis
-    nodeFilters:
-      - server:0
+      - loadbalancer
 
 # Volume mounts
 volumes:

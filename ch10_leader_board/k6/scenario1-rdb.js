@@ -11,19 +11,11 @@ const getUserRankDuration = new Trend('get_user_rank_duration');
 // Test configuration
 export const options = {
   scenarios: {
-    // Scenario 1: Ramp up to peak load
-    ramp_up: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: [
-        { duration: '30s', target: 10 },  // Warm up
-        { duration: '1m', target: 50 },   // Ramp to moderate load
-        { duration: '2m', target: 100 },  // Ramp to high load
-        { duration: '2m', target: 150 },  // Peak load (simulating 2500 QPS with mixed operations)
-        { duration: '1m', target: 50 },   // Ramp down
-        { duration: '30s', target: 0 },   // Cool down
-      ],
-      gracefulRampDown: '30s',
+    // Scenario 1: Constant 500 VUs for 5 minutes
+    constant_load: {
+      executor: 'constant-vus',
+      vus: 500,
+      duration: '5m',
     },
   },
   thresholds: {
@@ -35,11 +27,12 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8081';
+// Use /v1 endpoint for PostgreSQL-only scenario
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:30080';
+const API_VERSION = '/v1';
 
 // Generate random user IDs from the existing 50,000 users
 function randomUser() {
-  // 從 player_1 到 player_50000 隨機選擇
   const userId = `player_${Math.floor(Math.random() * 50000) + 1}`;
   return userId;
 }
@@ -64,12 +57,13 @@ export default function () {
     const params = {
       headers: {
         'Content-Type': 'application/json',
+        'X-Scenario': 'rdb-only',
       },
       tags: { name: 'UpdateScore' },
     };
 
     const startTime = new Date();
-    const res = http.post(`${BASE_URL}/v1/scores`, payload, params);
+    const res = http.post(`${BASE_URL}${API_VERSION}/scores`, payload, params);
     scoreUpdateDuration.add(new Date() - startTime);
 
     check(res, {
@@ -87,11 +81,12 @@ export default function () {
   } else if (operation < 0.85) {
     // 15% - Get top 10 leaderboard (frequent read)
     const params = {
+      headers: { 'X-Scenario': 'rdb-only' },
       tags: { name: 'GetLeaderboard' },
     };
 
     const startTime = new Date();
-    const res = http.get(`${BASE_URL}/v1/scores`, params);
+    const res = http.get(`${BASE_URL}${API_VERSION}/scores`, params);
     getLeaderboardDuration.add(new Date() - startTime);
 
     check(res, {
@@ -110,11 +105,12 @@ export default function () {
     // 15% - Get user rank (heavy operation in RDB)
     const userId = randomUser();
     const params = {
+      headers: { 'X-Scenario': 'rdb-only' },
       tags: { name: 'GetUserRank' },
     };
 
     const startTime = new Date();
-    const res = http.get(`${BASE_URL}/v1/scores/${userId}`, params);
+    const res = http.get(`${BASE_URL}${API_VERSION}/scores/${userId}`, params);
     getUserRankDuration.add(new Date() - startTime);
 
     // User might not exist, so 404 is acceptable
@@ -137,7 +133,7 @@ export function handleSummary(data) {
 // Helper function for text summary
 function textSummary(data, options) {
   let output = '\n';
-  output += '======== Scenario 1: PostgreSQL Only - Load Test Results ========\n\n';
+  output += '======== Scenario 1: PostgreSQL Only (/v1) - Load Test Results ========\n\n';
 
   output += 'Test Summary:\n';
   output += `  Total Requests: ${data.metrics.http_reqs?.values?.count || 0}\n`;
@@ -152,7 +148,7 @@ function textSummary(data, options) {
   output += `  Get Leaderboard P95: ${data.metrics.get_leaderboard_duration?.values?.['p(95)']?.toFixed(2) || 0}ms\n`;
   output += `  Get User Rank P95: ${data.metrics.get_user_rank_duration?.values?.['p(95)']?.toFixed(2) || 0}ms\n\n`;
 
-  output += '==================================================================\n';
+  output += '========================================================================\n';
 
   return output;
 }

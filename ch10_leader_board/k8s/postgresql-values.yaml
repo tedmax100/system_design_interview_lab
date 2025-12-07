@@ -77,10 +77,12 @@ primary:
         $$ LANGUAGE plpgsql;
 
         -- 觸發器
+        /*
         CREATE TRIGGER refresh_top10_trigger
         AFTER INSERT OR UPDATE ON monthly_leaderboard
         FOR EACH STATEMENT
         EXECUTE FUNCTION refresh_top10();
+        */
 
         -- ====================================================
         -- 預填充 50,000 筆測試資料

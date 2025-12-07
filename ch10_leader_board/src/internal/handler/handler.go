@@ -9,10 +9,10 @@ import (
 )
 
 type Handler struct {
-	repo *repository.PostgresRepository
+	repo repository.Repository
 }
 
-func NewHandler(repo *repository.PostgresRepository) *Handler {
+func NewHandler(repo repository.Repository) *Handler {
 	return &Handler{repo: repo}
 }
 
@@ -31,8 +31,8 @@ type UpdateScoreResponse struct {
 
 // LeaderboardResponse represents the response for top N leaderboard
 type LeaderboardResponse struct {
-	Status string                          `json:"status"`
-	Data   LeaderboardData                 `json:"data"`
+	Status string          `json:"status"`
+	Data   LeaderboardData `json:"data"`
 }
 
 type LeaderboardData struct {
@@ -47,13 +47,13 @@ type UserRankResponse struct {
 }
 
 type UserRankData struct {
-	UserID    string                          `json:"user_id"`
-	Score     int                             `json:"score"`
-	Rank      int                             `json:"rank"`
-	Neighbors []repository.LeaderboardEntry   `json:"neighbors,omitempty"`
+	UserID    string                        `json:"user_id"`
+	Score     int                           `json:"score"`
+	Rank      int                           `json:"rank"`
+	Neighbors []repository.LeaderboardEntry `json:"neighbors,omitempty"`
 }
 
-// UpdateScore handles POST /v1/scores
+// UpdateScore handles POST /v1/scores or /v2/scores
 func (h *Handler) UpdateScore(w http.ResponseWriter, r *http.Request) {
 	var req UpdateScoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -70,7 +70,9 @@ func (h *Handler) UpdateScore(w http.ResponseWriter, r *http.Request) {
 		req.Points = 1 // Default to 1 point per win
 	}
 
-	newScore, err := h.repo.UpdateScore(req.UserID, req.Points, req.MatchID)
+	// Use context from request for tracing propagation
+	ctx := r.Context()
+	newScore, err := h.repo.UpdateScoreWithContext(ctx, req.UserID, req.Points, req.MatchID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -83,9 +85,11 @@ func (h *Handler) UpdateScore(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetLeaderboard handles GET /v1/scores
+// GetLeaderboard handles GET /v1/scores or /v2/scores
 func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
-	entries, err := h.repo.GetTopN(10)
+	// Use context from request for tracing propagation
+	ctx := r.Context()
+	entries, err := h.repo.GetTopNWithContext(ctx, 10)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -101,7 +105,7 @@ func (h *Handler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetUserRank handles GET /v1/scores/{user_id}
+// GetUserRank handles GET /v1/scores/{user_id} or /v2/scores/{user_id}
 func (h *Handler) GetUserRank(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["user_id"]
@@ -114,7 +118,9 @@ func (h *Handler) GetUserRank(w http.ResponseWriter, r *http.Request) {
 	// Get neighbors count from query parameter (default: 4)
 	neighborCount := 4
 
-	userEntry, neighbors, err := h.repo.GetUserRank(userID, neighborCount)
+	// Use context from request for tracing propagation
+	ctx := r.Context()
+	userEntry, neighbors, err := h.repo.GetUserRankWithContext(ctx, userID, neighborCount)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

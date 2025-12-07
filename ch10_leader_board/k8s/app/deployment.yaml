@@ -1,22 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: leaderboard-app-rdb
+  name: leaderboard-app
   namespace: leaderboard
   labels:
     app: leaderboard
-    scenario: rdb-only
 spec:
   replicas: 3
   selector:
     matchLabels:
       app: leaderboard
-      scenario: rdb-only
   template:
     metadata:
       labels:
         app: leaderboard
-        scenario: rdb-only
     spec:
       containers:
       - name: app
@@ -25,88 +22,47 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: USE_REDIS
-          value: "false"
-        - name: DATABASE_URL
-          value: "postgres://postgres:postgres123@postgresql:5432/leaderboard?sslmode=disable"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: leaderboard-app-redis
-  namespace: leaderboard
-  labels:
-    app: leaderboard
-    scenario: with-redis
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: leaderboard
-      scenario: with-redis
-  template:
-    metadata:
-      labels:
-        app: leaderboard
-        scenario: with-redis
-    spec:
-      containers:
-      - name: app
-        image: leaderboard-app:latest
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8080
-        env:
-        - name: USE_REDIS
-          value: "true"
         - name: DATABASE_URL
           value: "postgres://postgres:postgres123@postgresql:5432/leaderboard?sslmode=disable"
         - name: REDIS_ADDR
           value: "valkey:6379"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "tempo:4317"
+        - name: ENVIRONMENT
+          value: "demo"
         resources:
           requests:
             memory: "128Mi"
             cpu: "100m"
           limits:
-            memory: "256Mi"
-            cpu: "200m"
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: leaderboard-service-rdb
+  name: leaderboard-service
   namespace: leaderboard
+  labels:
+    app: leaderboard
 spec:
   selector:
     app: leaderboard
-    scenario: rdb-only
   ports:
   - port: 80
     targetPort: 8080
-    nodePort: 30081
-  type: NodePort
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: leaderboard-service-redis
-  namespace: leaderboard
-spec:
-  selector:
-    app: leaderboard
-    scenario: with-redis
-  ports:
-  - port: 80
-    targetPort: 8080
-    nodePort: 30082
+    nodePort: 30080
   type: NodePort

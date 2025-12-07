@@ -1,0 +1,49 @@
+# Tempo Helm values for distributed tracing with Service Graph
+tempo:
+  # Enable metrics generator
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://prometheus-kube-prometheus-prometheus.leaderboard:9090/api/v1/write"
+
+  # Storage configuration
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+
+  # Receivers configuration
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+  # Query frontend settings
+  queryFrontend:
+    search:
+      duration_slo: 5s
+      throughput_bytes_slo: 1.073741824e+09
+
+  # Enable service-graphs and span-metrics processors via overrides
+  overrides:
+    defaults:
+      metrics_generator:
+        processors:
+          - service-graphs
+          - span-metrics
+
+# Service configuration
+service:
+  type: ClusterIP
+
+# Resources for demo environment
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
