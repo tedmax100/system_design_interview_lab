@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources-extra
+  namespace: leaderboard
+  labels:
+    grafana_datasource: "1"
+data:
+  datasources-extra.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      url: http://tempo.leaderboard:3200
+      access: proxy
+      jsonData:
+        httpMethod: GET
+        tracesToLogsV2:
+          datasourceUid: ''
+        tracesToMetrics:
+          datasourceUid: prometheus
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
+        lokiSearch:
+          datasourceUid: ''

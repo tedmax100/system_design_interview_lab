@@ -30,3 +30,41 @@ spec:
   - port: metrics
     path: /metrics
     interval: 5s
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboard-metrics-redis
+  namespace: leaderboard
+  labels:
+    app: leaderboard
+    scenario: with-redis
+spec:
+  selector:
+    app: leaderboard
+    scenario: with-redis
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: leaderboard-monitor-redis
+  namespace: leaderboard
+  labels:
+    app: leaderboard
+    scenario: with-redis
+spec:
+  selector:
+    matchLabels:
+      app: leaderboard
+      scenario: with-redis
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 5s

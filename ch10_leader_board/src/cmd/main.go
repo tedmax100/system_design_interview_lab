@@ -8,17 +8,29 @@ import (
 	"leader_board/internal/handler"
 	"leader_board/internal/middleware"
 	"leader_board/internal/repository"
+	"leader_board/internal/tracing"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 func main() {
+	// Initialize tracing
+	cleanup, err := tracing.InitTracer("leaderboard-service")
+	if err != nil {
+		log.Printf("Warning: Failed to initialize tracing: %v", err)
+	} else {
+		defer cleanup()
+	}
+
 	// Load configuration
 	cfg := config.Load()
 
@@ -28,6 +40,14 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Configure connection pool
+	db.SetMaxOpenConns(10) // Maximum number of open connections
+	db.SetMaxIdleConns(5)  // Maximum number of idle connections
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Register DB stats collector for Prometheus metrics
+	prometheus.MustRegister(collectors.NewDBStatsCollector(db, "postgres"))
 
 	// Test database connection with retry
 	maxRetries := 10
@@ -52,6 +72,9 @@ func main() {
 
 	// Setup router
 	r := mux.NewRouter()
+
+	// Add OpenTelemetry middleware for automatic HTTP tracing
+	r.Use(otelmux.Middleware("leaderboard-service"))
 
 	// ============================================
 	// v1 API routes - PostgreSQL only (Scenario 1)

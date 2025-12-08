@@ -20,9 +20,9 @@ data:
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
-          "id": 100,
+          "id": 300,
           "panels": [],
-          "title": "📊 4 Golden Signals Overview",
+          "title": "🌐 K3D Cluster Total Resources",
           "type": "row"
         },
         {
@@ -35,30 +35,558 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 0.1 },
-                  { "color": "red", "value": 0.5 }
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 85 }
                 ]
               },
-              "unit": "s"
+              "unit": "percent",
+              "min": 0,
+              "max": 100
             }
           },
-          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
-          "id": 1,
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+          "id": 301,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])))",
+              "refId": "A"
+            }
+          ],
+          "title": "Cluster CPU %",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 85 }
+                ]
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+          "id": 302,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
+              "refId": "A"
+            }
+          ],
+          "title": "Cluster Memory %",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null }
+                ]
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+          "id": 303,
           "options": {
             "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
             "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
             "textMode": "auto"
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\"}[1m])) by (le))",
+              "expr": "sum(container_memory_working_set_bytes{container!=\"\"})",
               "refId": "A"
             }
           ],
-          "title": "🐘 PostgreSQL P95 Latency",
+          "title": "Total Container Memory",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+          "id": 304,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\"}[1m]))",
+              "refId": "A"
+            }
+          ],
+          "title": "Total CPU Cores Used",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "purple", "value": null }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+          "id": 305,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_info)",
+              "refId": "A"
+            }
+          ],
+          "title": "Total Pods (All NS)",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "orange", "value": null }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+          "id": 306,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "count(kube_node_info)",
+              "refId": "A"
+            }
+          ],
+          "title": "Nodes",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "mode": "normal" }
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 5 },
+          "id": 307,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{container!=\"\"}) by (namespace)",
+              "legendFormat": "{{namespace}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memory by Namespace (Stacked)",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
+          "id": 200,
+          "panels": [],
+          "title": "🖥️ Cluster Resources (Namespace: leaderboard)",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 85 }
+                ]
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
+          "id": 201,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * sum(container_memory_working_set_bytes{namespace=\"leaderboard\", container!=\"\"}) / sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"memory\"})",
+              "refId": "A"
+            }
+          ],
+          "title": "Namespace Memory Usage %",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 85 }
+                ]
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 12 },
+          "id": 202,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", container!=\"\"}[1m])) / sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"cpu\"})",
+              "refId": "A"
+            }
+          ],
+          "title": "Namespace CPU Usage %",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null }
+                ]
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 12 },
+          "id": 203,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", container!=\"\"})",
+              "refId": "A"
+            }
+          ],
+          "title": "Total Memory Used",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 12 },
+          "id": 204,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_info{namespace=\"leaderboard\"})",
+              "refId": "A"
+            }
+          ],
+          "title": "Total Pods",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "mode": "normal" }
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+          "id": 205,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", container!=\"\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memory by Pod (Stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "Compares P50, P95, P99 latency for Valkey scenario",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "mode": "normal" }
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 },
+          "id": 206,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", container!=\"\"}[1m])) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU by Pod (Stacked)",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+          "id": 100,
+          "panels": [],
+          "title": "📊 Overview - Key Metrics",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 100 },
+                  { "color": "red", "value": 500 }
+                ]
+              },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+          "id": 101,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\"}[1m]))",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
+              "legendFormat": "⚡ Valkey P95",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
+              "legendFormat": "⚡ Valkey P99",
+              "refId": "C"
+            }
+          ],
+          "title": "Total RPS",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 0.01 },
+                  { "color": "red", "value": 0.05 }
+                ]
+              },
+              "unit": "percentunit"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+          "id": 102,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{namespace=\"leaderboard\"}[1m])) or vector(0)",
+              "refId": "A"
+            }
+          ],
+          "title": "Error Rate",
           "type": "stat"
         },
         {
@@ -78,23 +606,57 @@ data:
               "unit": "s"
             }
           },
-          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
-          "id": 2,
+          "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+          "id": 103,
           "options": {
             "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
             "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
             "textMode": "auto"
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\"}[1m])) by (le))",
               "refId": "A"
             }
           ],
-          "title": "⚡ Valkey P95 Latency",
+          "title": "P95 Latency",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "blue", "value": null }
+                ]
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+          "id": 104,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_info{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\"})",
+              "refId": "A"
+            }
+          ],
+          "title": "App Pods",
           "type": "stat"
         },
         {
@@ -107,30 +669,30 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 0.01 },
-                  { "color": "red", "value": 0.05 }
+                  { "color": "yellow", "value": 0.7 },
+                  { "color": "red", "value": 0.9 }
                 ]
               },
               "unit": "percentunit"
             }
           },
-          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
-          "id": 3,
+          "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+          "id": 105,
           "options": {
             "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
             "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
             "textMode": "auto"
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{scenario=\"rdb-only\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{scenario=\"rdb-only\"}[1m])) or vector(0)",
+              "expr": "avg(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\"}[1m]) / on(pod) kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"cpu\", pod=~\"leaderboard-app-.*\"})",
               "refId": "A"
             }
           ],
-          "title": "🐘 PostgreSQL Error Rate",
+          "title": "Avg CPU Usage",
           "type": "stat"
         },
         {
@@ -143,128 +705,377 @@ data:
                 "mode": "absolute",
                 "steps": [
                   { "color": "green", "value": null },
-                  { "color": "yellow", "value": 0.01 },
-                  { "color": "red", "value": 0.05 }
+                  { "color": "yellow", "value": 0.7 },
+                  { "color": "red", "value": 0.9 }
                 ]
               },
               "unit": "percentunit"
             }
           },
-          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-          "id": 4,
+          "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+          "id": 106,
           "options": {
             "colorMode": "value",
             "graphMode": "area",
             "justifyMode": "auto",
             "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
             "textMode": "auto"
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{scenario=\"with-redis\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{scenario=\"with-redis\"}[1m])) or vector(0)",
+              "expr": "avg(container_memory_working_set_bytes{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\", container!=\"\"} / on(pod) kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"memory\", pod=~\"leaderboard-app-.*\"})",
               "refId": "A"
             }
           ],
-          "title": "⚡ Valkey Error Rate",
+          "title": "Avg Memory Usage",
           "type": "stat"
         },
         {
           "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
-          "id": 101,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+          "id": 400,
           "panels": [],
-          "title": "🚦 1. LATENCY - Response Time",
+          "title": "🎯 SLO - P95 Latency < 100ms",
           "type": "row"
         },
         {
           "datasource": "Prometheus",
-          "description": "Compares P50, P95, P99 latency between PostgreSQL-only and Valkey scenarios",
+          "description": "SLO: P95 Latency < 100ms\nGreen = Meeting SLO\nRed = Violating SLO",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "VIOLATION" }, "1": { "color": "green", "index": 1, "text": "OK" } }, "type": "value" }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              },
+              "unit": "none"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 28 },
+          "id": 401,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "expr": "(histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[5m])) by (le)) < bool 0.1) OR on() vector(0)",
+              "refId": "A"
+            }
+          ],
+          "title": "V1 (PostgreSQL) SLO Status",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "SLO: P95 Latency < 100ms\nGreen = Meeting SLO\nRed = Violating SLO",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "VIOLATION" }, "1": { "color": "green", "index": 1, "text": "OK" } }, "type": "value" }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              },
+              "unit": "none"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 28 },
+          "id": 402,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "value"
+          },
+          "targets": [
+            {
+              "expr": "(histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[5m])) by (le)) < bool 0.1) OR on() vector(0)",
+              "refId": "A"
+            }
+          ],
+          "title": "V2 (Redis+PG) SLO Status",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "Current P95 latency value in milliseconds.\nSLO Target: < 100ms",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "red", "value": 100 }
+                ]
+              },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 28 },
+          "id": 403,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[5m])) by (le)) * 1000",
+              "refId": "A"
+            }
+          ],
+          "title": "V1 P95 Latency",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "Current P95 latency value in milliseconds.\nSLO Target: < 100ms",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 50 },
+                  { "color": "red", "value": 100 }
+                ]
+              },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 28 },
+          "id": 404,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[5m])) by (le)) * 1000",
+              "refId": "A"
+            }
+          ],
+          "title": "V2 P95 Latency",
+          "type": "stat"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "P95 latency over time with SLO threshold line at 100ms",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
-                "axisLabel": "latency",
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
                 "fillOpacity": 10,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
                 "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
                 "showPoints": "never",
-                "spanNulls": true
+                "spanNulls": true,
+                "thresholdsStyle": { "mode": "line" }
               },
               "mappings": [],
-              "unit": "s"
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 100 }
+                ]
+              },
+              "unit": "ms"
             }
           },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-          "id": 10,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+          "id": 405,
           "options": {
             "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
             "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P50",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[5m])) by (le)) * 1000",
+              "legendFormat": "V1 (PostgreSQL Only)",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P95",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[5m])) by (le)) * 1000",
+              "legendFormat": "V2 (Redis + PostgreSQL)",
               "refId": "B"
-            },
-            {
-              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P99",
-              "refId": "C"
             }
           ],
-          "title": "Scenario 1: PostgreSQL Only - Latency Distribution",
+          "title": "P95 Latency Comparison (SLO: 100ms)",
           "type": "timeseries"
         },
         {
           "datasource": "Prometheus",
-          "description": "Compares P50, P95, P99 latency for Valkey scenario",
+          "description": "Percentage of time meeting SLO (P95 < 100ms) over selected time range",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "yellow", "value": 95 },
+                  { "color": "green", "value": 99 }
+                ]
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 32 },
+          "id": 406,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * avg_over_time((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (le)) < 0.1)[5m:1m])",
+              "legendFormat": "V1 SLO Compliance",
+              "refId": "A"
+            }
+          ],
+          "title": "V1 SLO Compliance %",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "description": "Percentage of time meeting SLO (P95 < 100ms) over selected time range",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "yellow", "value": 95 },
+                  { "color": "green", "value": 99 }
+                ]
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 32 },
+          "id": 407,
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * avg_over_time((histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (le)) < 0.1)[5m:1m])",
+              "legendFormat": "V2 SLO Compliance",
+              "refId": "A"
+            }
+          ],
+          "title": "V2 SLO Compliance %",
+          "type": "gauge"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+          "id": 1,
+          "panels": [],
+          "title": "🚦 Latency (Golden Signal #1)",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
-                "axisLabel": "latency",
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
                 "fillOpacity": 10,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
                 "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
                 "showPoints": "never",
                 "spanNulls": true
               },
               "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 0.1 }
+                ]
+              },
               "unit": "s"
             }
           },
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-          "id": 11,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "id": 2,
           "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
             "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P50",
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v1 p50 - {{exported_endpoint}}",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P95",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v1 p95 - {{exported_endpoint}}",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P99",
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v1 p99 - {{exported_endpoint}}",
               "refId": "C"
             }
           ],
-          "title": "Scenario 2: PostgreSQL + Valkey - Latency Distribution",
+          "title": "V1 (PostgreSQL Only) - Latency Percentiles",
           "type": "timeseries"
         },
         {
@@ -274,176 +1085,193 @@ data:
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
                 "showPoints": "never",
                 "spanNulls": true
               },
               "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 0.1 }
+                ]
+              },
               "unit": "s"
             }
           },
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
-          "id": 12,
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "id": 3,
           "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "right" },
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
             "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL Only - P95",
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v2 p50 - {{exported_endpoint}}",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ PostgreSQL + Valkey - P95",
-              "refId": "B"
-            }
-          ],
-          "title": "P95 Latency Comparison (Target: < 50ms)",
-          "type": "timeseries"
-        },
-        {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
-          "id": 102,
-          "panels": [],
-          "title": "📈 2. TRAFFIC - Request Rate (QPS/TPS)",
-          "type": "row"
-        },
-        {
-          "datasource": "Prometheus",
-          "description": "Total requests per second by scenario",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "palette-classic" },
-              "custom": {
-                "axisLabel": "req/s",
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "lineWidth": 2,
-                "showPoints": "never",
-                "spanNulls": true
-              },
-              "mappings": [],
-              "unit": "reqps"
-            }
-          },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
-          "id": 20,
-          "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
-            "tooltip": { "mode": "multi" }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(http_requests_total{scenario=\"rdb-only\"}[1m]))",
-              "legendFormat": "🐘 PostgreSQL Only - Total QPS",
-              "refId": "A"
-            },
-            {
-              "expr": "sum(rate(http_requests_total{scenario=\"with-redis\"}[1m]))",
-              "legendFormat": "⚡ PostgreSQL + Valkey - Total QPS",
-              "refId": "B"
-            }
-          ],
-          "title": "Total Request Rate (QPS) - Scenario Comparison",
-          "type": "timeseries"
-        },
-        {
-          "datasource": "Prometheus",
-          "description": "Request rate breakdown by endpoint",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "palette-classic" },
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "lineWidth": 2,
-                "showPoints": "never",
-                "spanNulls": true
-              },
-              "mappings": [],
-              "unit": "reqps"
-            }
-          },
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
-          "id": 21,
-          "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
-            "tooltip": { "mode": "multi" }
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(http_requests_total{method=\"POST\"}[1m])) by (scenario)",
-              "legendFormat": "{{scenario}} - POST (Score Update)",
-              "refId": "A"
-            },
-            {
-              "expr": "sum(rate(http_requests_total{method=\"GET\", endpoint=\"/v1/scores\"}[1m])) by (scenario)",
-              "legendFormat": "{{scenario}} - GET Top 10",
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v2 p95 - {{exported_endpoint}}",
               "refId": "B"
             },
             {
-              "expr": "sum(rate(http_requests_total{method=\"GET\", endpoint=~\"/v1/scores/.+\"}[1m])) by (scenario)",
-              "legendFormat": "{{scenario}} - GET User Rank",
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (le, endpoint))",
+              "legendFormat": "v2 p99 - {{exported_endpoint}}",
               "refId": "C"
             }
           ],
-          "title": "Request Rate by Endpoint",
+          "title": "V2 (Redis + PostgreSQL) - Latency Percentiles",
           "type": "timeseries"
         },
         {
           "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
-          "id": 103,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+          "id": 10,
           "panels": [],
-          "title": "❌ 3. ERRORS - Error Rate & Status Distribution",
+          "title": "📈 Traffic (Golden Signal #2)",
           "type": "row"
         },
         {
           "datasource": "Prometheus",
-          "description": "5xx error rate over time",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
-                "fillOpacity": 30,
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
                 "showPoints": "never",
-                "spanNulls": true
+                "spanNulls": true,
+                "stacking": { "mode": "none" }
               },
               "mappings": [],
-              "unit": "percentunit"
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "reqps"
             }
           },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
-          "id": 30,
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+          "id": 11,
           "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
             "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{scenario=\"rdb-only\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{scenario=\"rdb-only\"}[1m]))",
-              "legendFormat": "🐘 PostgreSQL Only - 5xx Rate",
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (endpoint, method)",
+              "legendFormat": "{{method}} {{exported_endpoint}}",
               "refId": "A"
-            },
-            {
-              "expr": "sum(rate(http_requests_total{scenario=\"with-redis\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{scenario=\"with-redis\"}[1m]))",
-              "legendFormat": "⚡ PostgreSQL + Valkey - 5xx Rate",
-              "refId": "B"
             }
           ],
-          "title": "Error Rate (5xx) Over Time",
+          "title": "V1 Request Rate by Endpoint",
           "type": "timeseries"
         },
         {
           "datasource": "Prometheus",
-          "description": "HTTP status code distribution",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "mode": "none" }
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+          "id": 12,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (endpoint, method)",
+              "legendFormat": "{{method}} {{exported_endpoint}}",
+              "refId": "A"
+            }
+          ],
+          "title": "V2 Request Rate by Endpoint",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+          "id": 20,
+          "panels": [],
+          "title": "❌ Errors (Golden Signal #3)",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 30,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.01 }] },
+              "unit": "percentunit"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "id": 21,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\", status=~\"5..\"}[1m])) by (endpoint) / sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v1/.*\"}[1m])) by (endpoint)",
+              "legendFormat": "v1 {{exported_endpoint}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\", status=~\"5..\"}[1m])) by (endpoint) / sum(rate(http_requests_total{namespace=\"leaderboard\", exported_endpoint=~\"/v2/.*\"}[1m])) by (endpoint)",
+              "legendFormat": "v2 {{exported_endpoint}}",
+              "refId": "B"
+            }
+          ],
+          "title": "Error Rate by Endpoint (5xx)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -451,8 +1279,8 @@ data:
               "mappings": []
             }
           },
-          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 32 },
-          "id": 31,
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 24 },
+          "id": 22,
           "options": {
             "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
             "pieType": "donut",
@@ -460,7 +1288,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{scenario=\"rdb-only\"}[5m])) by (status)",
+              "expr": "sum(increase(http_requests_total{namespace=\"leaderboard\"}[5m])) by (status)",
               "legendFormat": "{{status}}",
               "refId": "A"
             }
@@ -473,161 +1301,360 @@ data:
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
-              "custom": { "hideFrom": { "tooltip": false, "viz": false, "legend": false } },
-              "mappings": []
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "mode": "normal" }
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
             }
           },
-          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 32 },
-          "id": 32,
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 24 },
+          "id": 23,
           "options": {
-            "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
-            "pieType": "donut",
-            "tooltip": { "mode": "single" }
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "sum(rate(http_requests_total{scenario=\"with-redis\"}[5m])) by (status)",
+              "expr": "sum(increase(http_requests_total{namespace=\"leaderboard\", status=~\"4..\"}[1m])) by (status)",
               "legendFormat": "{{status}}",
               "refId": "A"
-            }
-          ],
-          "title": "⚡ Valkey - Status Distribution",
-          "type": "piechart"
-        },
-        {
-          "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
-          "id": 104,
-          "panels": [],
-          "title": "🔥 4. SATURATION - Resource Utilization",
-          "type": "row"
-        },
-        {
-          "datasource": "Prometheus",
-          "description": "CPU usage by pod",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "palette-classic" },
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "lineWidth": 2,
-                "showPoints": "never",
-                "spanNulls": true
-              },
-              "mappings": [],
-              "unit": "percentunit"
-            }
-          },
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 41 },
-          "id": 40,
-          "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
-            "tooltip": { "mode": "multi" }
-          },
-          "targets": [
+            },
             {
-              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", app=\"leaderboard\", container!=\"\"}[1m])) by (pod)",
-              "legendFormat": "{{pod}}",
-              "refId": "A"
+              "expr": "sum(increase(http_requests_total{namespace=\"leaderboard\", status=~\"5..\"}[1m])) by (status)",
+              "legendFormat": "{{status}}",
+              "refId": "B"
             }
           ],
-          "title": "CPU Usage by Pod",
-          "type": "timeseries"
-        },
-        {
-          "datasource": "Prometheus",
-          "description": "Memory usage by pod",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "palette-classic" },
-              "custom": {
-                "drawStyle": "line",
-                "fillOpacity": 10,
-                "lineWidth": 2,
-                "showPoints": "never",
-                "spanNulls": true
-              },
-              "mappings": [],
-              "unit": "bytes"
-            }
-          },
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 41 },
-          "id": 41,
-          "options": {
-            "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" },
-            "tooltip": { "mode": "multi" }
-          },
-          "targets": [
-            {
-              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", app=\"leaderboard\", container!=\"\"}) by (pod)",
-              "legendFormat": "{{pod}}",
-              "refId": "A"
-            }
-          ],
-          "title": "Memory Usage by Pod",
+          "title": "Error Counts (4xx & 5xx)",
           "type": "timeseries"
         },
         {
           "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
-          "id": 105,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+          "id": 30,
           "panels": [],
-          "title": "🔬 Per-Endpoint Latency Analysis",
+          "title": "⚡ Saturation (Golden Signal #4) - Application",
           "type": "row"
         },
         {
           "datasource": "Prometheus",
-          "description": "GET /v1/scores (Top 10 leaderboard) latency comparison",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
-                "fillOpacity": 10,
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
-                "showPoints": "never"
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
               },
-              "unit": "s"
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
             }
           },
-          "gridPos": { "h": 7, "w": 8, "x": 0, "y": 50 },
-          "id": 50,
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 33 },
+          "id": 31,
           "options": {
             "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
             "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=\"/v1/scores\", method=\"GET\", scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P95",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\", container!=\"\"}[1m])) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"cpu\", pod=~\"leaderboard-app-.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
               "refId": "A"
-            },
-            {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=\"/v1/scores\", method=\"GET\", scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P95",
-              "refId": "B"
             }
           ],
-          "title": "GET /v1/scores (Top 10) - P95",
+          "title": "App CPU Usage (% of Limit)",
           "type": "timeseries"
         },
         {
           "datasource": "Prometheus",
-          "description": "GET /v1/scores/{user_id} (User rank query) latency comparison",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
-                "fillOpacity": 10,
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
-                "showPoints": "never"
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
               },
-              "unit": "s"
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
             }
           },
-          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 50 },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 33 },
+          "id": 32,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\", container!=\"\"}) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"memory\", pod=~\"leaderboard-app-.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "App Memory Usage (% of Limit)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "short"
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 33 },
+          "id": 33,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "count(kube_pod_info{namespace=\"leaderboard\", pod=~\"leaderboard-app-.*\"})",
+              "legendFormat": "Running Pods",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"leaderboard\", horizontalpodautoscaler=~\"leaderboard-app-.*\"})",
+              "legendFormat": "Min Replicas (Total)",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"leaderboard\", horizontalpodautoscaler=~\"leaderboard-app-.*\"})",
+              "legendFormat": "Max Replicas (Total)",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"leaderboard\", horizontalpodautoscaler=~\"leaderboard-app-.*\"})",
+              "legendFormat": "Desired Replicas (Total)",
+              "refId": "D"
+            },
+            {
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"leaderboard\", horizontalpodautoscaler=~\"leaderboard-app-.*\"}",
+              "legendFormat": "{{horizontalpodautoscaler}}",
+              "refId": "E"
+            }
+          ],
+          "title": "Pod Count & HPA Status",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 41 },
+          "id": 40,
+          "panels": [],
+          "title": "⚡ Saturation - Database (PostgreSQL)",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 42 },
+          "id": 41,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", pod=~\"postgres.*\", container!=\"\"}[1m])) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"cpu\", pod=~\"postgres.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "PostgreSQL CPU Usage (% of Limit)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 42 },
+          "id": 42,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", pod=~\"postgres.*\", container!=\"\"}) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"memory\", pod=~\"postgres.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "PostgreSQL Memory Usage (% of Limit)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 8 }, { "color": "red", "value": 10 }] },
+              "unit": "short",
+              "max": 15
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 42 },
+          "id": 43,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "go_sql_open_connections{db_name=\"postgres\"}",
+              "legendFormat": "Open Connections",
+              "refId": "A"
+            },
+            {
+              "expr": "go_sql_idle_connections{db_name=\"postgres\"}",
+              "legendFormat": "Idle Connections",
+              "refId": "B"
+            },
+            {
+              "expr": "go_sql_in_use_connections{db_name=\"postgres\"}",
+              "legendFormat": "In Use Connections",
+              "refId": "C"
+            },
+            {
+              "expr": "go_sql_max_open_connections{db_name=\"postgres\"}",
+              "legendFormat": "Max Open (Limit: 10)",
+              "refId": "D"
+            }
+          ],
+          "title": "Go DB Connection Pool",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 50 },
+          "id": 50,
+          "panels": [],
+          "title": "⚡ Saturation - Redis/Valkey",
+          "type": "row"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 51 },
           "id": 51,
           "options": {
             "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -635,35 +1662,38 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=~\"/v1/scores/.+\", method=\"GET\", scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P95",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"leaderboard\", pod=~\"valkey.*\", container!=\"\"}[1m])) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"cpu\", pod=~\"valkey.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
               "refId": "A"
-            },
-            {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=~\"/v1/scores/.+\", method=\"GET\", scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P95",
-              "refId": "B"
             }
           ],
-          "title": "GET /v1/scores/{user_id} (Rank) - P95",
+          "title": "Valkey/Redis CPU Usage (% of Limit)",
           "type": "timeseries"
         },
         {
           "datasource": "Prometheus",
-          "description": "POST /v1/scores (Score update) latency comparison",
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
               "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
                 "drawStyle": "line",
-                "fillOpacity": 10,
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
                 "lineWidth": 2,
-                "showPoints": "never"
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
               },
-              "unit": "s"
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] },
+              "unit": "percentunit",
+              "max": 1
             }
           },
-          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 50 },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 51 },
           "id": 52,
           "options": {
             "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
@@ -671,187 +1701,151 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=\"/v1/scores\", method=\"POST\", scenario=\"rdb-only\"}[1m])) by (le))",
-              "legendFormat": "🐘 PostgreSQL P95",
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"leaderboard\", pod=~\"valkey.*\", container!=\"\"}) by (pod) / on(pod) group_left() sum(kube_pod_container_resource_limits{namespace=\"leaderboard\", resource=\"memory\", pod=~\"valkey.*\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Valkey/Redis Memory Usage (% of Limit)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 51 },
+          "id": 53,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
+          },
+          "targets": [
+            {
+              "expr": "container_memory_working_set_bytes{namespace=\"leaderboard\", pod=~\"valkey.*\", container!=\"\"}",
+              "legendFormat": "{{pod}} - Working Set",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{endpoint=\"/v1/scores\", method=\"POST\", scenario=\"with-redis\"}[1m])) by (le))",
-              "legendFormat": "⚡ Valkey P95",
+              "expr": "container_memory_usage_bytes{namespace=\"leaderboard\", pod=~\"valkey.*\", container!=\"\"}",
+              "legendFormat": "{{pod}} - Total Usage",
               "refId": "B"
             }
           ],
-          "title": "POST /v1/scores (Update) - P95",
+          "title": "Valkey/Redis Memory (Absolute)",
           "type": "timeseries"
         },
         {
           "collapsed": false,
-          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 57 },
-          "id": 106,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 59 },
+          "id": 60,
           "panels": [],
-          "title": "🎯 SLO Compliance",
+          "title": "🔗 Service Graph (from Tempo)",
           "type": "row"
         },
         {
           "datasource": "Prometheus",
           "fieldConfig": {
             "defaults": {
-              "color": { "mode": "thresholds" },
-              "mappings": [],
-              "max": 1,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "yellow", "value": 0.9 },
-                  { "color": "green", "value": 0.99 }
-                ]
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
               },
-              "unit": "percentunit"
-            }
-          },
-          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 58 },
-          "id": 60,
-          "options": {
-            "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
-          },
-          "targets": [
-            {
-              "expr": "sum(rate(http_request_duration_seconds_bucket{scenario=\"rdb-only\", le=\"0.05\"}[5m])) / sum(rate(http_request_duration_seconds_count{scenario=\"rdb-only\"}[5m]))",
-              "refId": "A"
-            }
-          ],
-          "title": "🐘 PostgreSQL - % < 50ms",
-          "type": "gauge"
-        },
-        {
-          "datasource": "Prometheus",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
               "mappings": [],
-              "max": 1,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "yellow", "value": 0.9 },
-                  { "color": "green", "value": 0.99 }
-                ]
-              },
-              "unit": "percentunit"
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "reqps"
             }
           },
-          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 58 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 60 },
           "id": 61,
           "options": {
-            "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "sum(rate(http_request_duration_seconds_bucket{scenario=\"with-redis\", le=\"0.05\"}[5m])) / sum(rate(http_request_duration_seconds_count{scenario=\"with-redis\"}[5m]))",
+              "expr": "sum(rate(traces_service_graph_request_total{source=\"tempo\"}[1m])) by (client, server)",
+              "legendFormat": "{{client}} → {{server}}",
               "refId": "A"
             }
           ],
-          "title": "⚡ Valkey - % < 50ms",
-          "type": "gauge"
+          "title": "Service Graph - Request Rate",
+          "type": "timeseries"
         },
         {
           "datasource": "Prometheus",
           "fieldConfig": {
             "defaults": {
-              "color": { "mode": "thresholds" },
-              "mappings": [],
-              "max": 1,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "yellow", "value": 0.95 },
-                  { "color": "green", "value": 0.99 }
-                ]
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": true
               },
-              "unit": "percentunit"
+              "mappings": [],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "s"
             }
           },
-          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 58 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 60 },
           "id": 62,
           "options": {
-            "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
-              "expr": "1 - (sum(rate(http_requests_total{scenario=\"rdb-only\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{scenario=\"rdb-only\"}[5m])))",
+              "expr": "histogram_quantile(0.95, sum(rate(traces_service_graph_request_server_seconds_bucket{source=\"tempo\"}[1m])) by (le, client, server))",
+              "legendFormat": "{{client}} → {{server}} p95",
               "refId": "A"
             }
           ],
-          "title": "🐘 PostgreSQL - Success Rate",
-          "type": "gauge"
-        },
-        {
-          "datasource": "Prometheus",
-          "fieldConfig": {
-            "defaults": {
-              "color": { "mode": "thresholds" },
-              "mappings": [],
-              "max": 1,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  { "color": "red", "value": null },
-                  { "color": "yellow", "value": 0.95 },
-                  { "color": "green", "value": 0.99 }
-                ]
-              },
-              "unit": "percentunit"
-            }
-          },
-          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 58 },
-          "id": 63,
-          "options": {
-            "orientation": "auto",
-            "reduceOptions": { "values": false, "calcs": ["lastNotNull"] },
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
-          },
-          "targets": [
-            {
-              "expr": "1 - (sum(rate(http_requests_total{scenario=\"with-redis\", status=~\"5..\"}[5m])) / sum(rate(http_requests_total{scenario=\"with-redis\"}[5m])))",
-              "refId": "A"
-            }
-          ],
-          "title": "⚡ Valkey - Success Rate",
-          "type": "gauge"
+          "title": "Service Graph - Latency (P95)",
+          "type": "timeseries"
         }
       ],
+      "refresh": "10s",
       "schemaVersion": 27,
       "style": "dark",
-      "tags": ["leaderboard", "4-golden-signals", "performance", "comparison"],
-      "templating": {
-        "list": []
-      },
-      "time": {
-        "from": "now-15m",
-        "to": "now"
-      },
-      "timepicker": {
-        "refresh_intervals": ["5s", "10s", "30s", "1m"]
-      },
+      "tags": ["leaderboard", "4-golden-signals", "performance"],
+      "templating": { "list": [] },
+      "time": { "from": "now-15m", "to": "now" },
+      "timepicker": {},
       "timezone": "",
       "title": "Leaderboard - 4 Golden Signals",
-      "uid": "leaderboard-4gs",
+      "uid": "leaderboard-golden-signals",
       "version": 1
     }

@@ -11,11 +11,17 @@ const getUserRankDuration = new Trend('get_user_rank_duration');
 // Test configuration
 export const options = {
   scenarios: {
-    // Scenario 2: Constant 500 VUs for 5 minutes (with Valkey cache)
-    constant_load: {
-      executor: 'constant-vus',
-      vus: 500,
-      duration: '5m',
+    // Scenario 2: Ramp up to 500 VUs over 5 minutes (with Valkey cache)
+    ramp_up: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '1m', target: 50 },    // Ramp up to 50 VUs
+        { duration: '1m', target: 150 },   // Ramp up to 150 VUs
+        { duration: '1m', target: 250 },   // Ramp up to 250 VUs
+        { duration: '2m', target: 250 },   // Sustain 250 VUs for 2 minutes
+      ],
+      gracefulRampDown: '30s',
     },
   },
   thresholds: {
@@ -63,7 +69,7 @@ export default function () {
     };
 
     const startTime = new Date();
-    const res = http.post(`${BASE_URL}${API_VERSION}/scores`, payload, params);
+    const res = http.post(`${BASE_URL}/v2/scores`, payload, params);
     scoreUpdateDuration.add(new Date() - startTime);
 
     check(res, {
@@ -86,7 +92,7 @@ export default function () {
     };
 
     const startTime = new Date();
-    const res = http.get(`${BASE_URL}${API_VERSION}/scores`, params);
+    const res = http.get(`${BASE_URL}/v2/scores`, params);
     getLeaderboardDuration.add(new Date() - startTime);
 
     check(res, {
@@ -110,7 +116,7 @@ export default function () {
     };
 
     const startTime = new Date();
-    const res = http.get(`${BASE_URL}${API_VERSION}/scores/${userId}`, params);
+    const res = http.get(`${BASE_URL}/v2/scores/${userId}`, params);
     getUserRankDuration.add(new Date() - startTime);
 
     // User might not exist, so 404 is acceptable

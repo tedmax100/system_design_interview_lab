@@ -14,38 +14,26 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-var tracer trace.Tracer
+var Tracer trace.Tracer
 
 // InitTracer initializes OpenTelemetry tracing with OTLP exporter
 func InitTracer(serviceName string) (func(), error) {
 	ctx := context.Background()
 
-	// Get OTLP endpoint from environment
-	otlpEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if otlpEndpoint == "" {
-		otlpEndpoint = "tempo:4317"
+	// Get Tempo endpoint from environment or use default
+	tempoEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if tempoEndpoint == "" {
+		tempoEndpoint = "tempo.leaderboard:4317"
 	}
 
 	// Create OTLP exporter
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, otlpEndpoint,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(tempoEndpoint),
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithTimeout(5*time.Second),
 	)
-	if err != nil {
-		log.Printf("Warning: Failed to connect to OTLP endpoint %s: %v", otlpEndpoint, err)
-		// Return a no-op shutdown function if tracing is not available
-		tracer = otel.Tracer(serviceName)
-		return func() {}, nil
-	}
-
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +45,7 @@ func InitTracer(serviceName string) (func(), error) {
 			semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion("1.0.0"),
-			attribute.String("environment", getEnvOrDefault("ENVIRONMENT", "development")),
+			attribute.String("environment", getEnv("ENVIRONMENT", "development")),
 		),
 	)
 	if err != nil {
@@ -73,16 +61,19 @@ func InitTracer(serviceName string) (func(), error) {
 
 	// Set global trace provider
 	otel.SetTracerProvider(tp)
+
+	// Set global propagator
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
 
-	tracer = tp.Tracer(serviceName)
+	// Initialize the tracer
+	Tracer = tp.Tracer(serviceName)
 
-	log.Printf("Tracing initialized with OTLP endpoint: %s", otlpEndpoint)
+	log.Printf("Tracing initialized, exporting to %s", tempoEndpoint)
 
-	// Return shutdown function
+	// Return cleanup function
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -92,32 +83,7 @@ func InitTracer(serviceName string) (func(), error) {
 	}, nil
 }
 
-// GetTracer returns the global tracer instance
-func GetTracer() trace.Tracer {
-	if tracer == nil {
-		tracer = otel.Tracer("leaderboard")
-	}
-	return tracer
-}
-
-// StartSpan creates a new span with the given name
-func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return GetTracer().Start(ctx, name, opts...)
-}
-
-// AddSpanAttributes adds attributes to the current span
-func AddSpanAttributes(ctx context.Context, attrs ...attribute.KeyValue) {
-	span := trace.SpanFromContext(ctx)
-	span.SetAttributes(attrs...)
-}
-
-// RecordError records an error on the current span
-func RecordError(ctx context.Context, err error) {
-	span := trace.SpanFromContext(ctx)
-	span.RecordError(err)
-}
-
-func getEnvOrDefault(key, defaultValue string) string {
+func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}

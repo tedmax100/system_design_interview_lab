@@ -57,28 +57,18 @@ deploy-monitoring:
 	helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
 		--namespace $(NAMESPACE) \
 		--set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false \
-		--set prometheus.prometheusSpec.enableRemoteWriteReceiver=true \
+		--set 'prometheus.prometheusSpec.enableFeatures={remote-write-receiver}' \
+		--set 'prometheus.prometheusSpec.additionalArgs[0].name=web.enable-remote-write-receiver' \
 		--set grafana.adminPassword=admin \
 		--set grafana.service.type=NodePort \
 		--set grafana.service.nodePort=30300 \
 		--set prometheus.service.type=NodePort \
 		--set prometheus.service.nodePort=30090 \
-		--set "grafana.additionalDataSources[0].name=Tempo" \
-		--set "grafana.additionalDataSources[0].type=tempo" \
-		--set "grafana.additionalDataSources[0].url=http://tempo:3200" \
-		--set "grafana.additionalDataSources[0].access=proxy" \
-		--set "grafana.additionalDataSources[0].jsonData.tracesToMetrics.datasourceUid=prometheus" \
-		--set "grafana.additionalDataSources[0].jsonData.serviceMap.datasourceUid=prometheus" \
-		--set "grafana.additionalDataSources[0].jsonData.nodeGraph.enabled=true"
+		--set grafana.sidecar.datasources.enabled=true \
+		--set grafana.sidecar.datasources.searchNamespace=$(NAMESPACE)
 
-	@echo "Deploying Tempo for distributed tracing..."
-	helm upgrade --install tempo grafana/tempo \
-		--namespace $(NAMESPACE) \
-		--values k8s/monitoring/tempo-values.yaml \
-		--wait --timeout 3m
-
-	@echo "Deploying Grafana dashboard..."
-	kubectl apply -f k8s/monitoring/grafana-dashboard.yaml
+	@echo "Deploying Grafana dashboards and datasources..."
+	kubectl apply -f k8s/monitoring/
 
 deploy-postgresql:
 	@echo "Deploying PostgreSQL via Helm..."
@@ -100,52 +90,30 @@ deploy-app:
 	kubectl apply -f k8s/app/hpa.yaml
 
 test-scenario1:
-	@echo "Running Scenario 1: PostgreSQL Only (/v1)"
-	@echo "Endpoint: http://localhost:30080/v1/scores"
-	@echo "Open Grafana at http://localhost:30300 to watch metrics"
-	@echo ""
+	@echo "Running Scenario 1: RDB Only (500 VUs, 5 min)"
+	@echo "Service available at http://localhost:8081"
 	k6 run k6/scenario1-rdb.js
 
 test-scenario2:
-	@echo "Running Scenario 2: PostgreSQL + Valkey (/v2)"
-	@echo "Endpoint: http://localhost:30080/v2/scores"
-	@echo "Open Grafana at http://localhost:30300 to watch metrics"
-	@echo ""
+	@echo "Running Scenario 2: With Valkey (500 VUs, 5 min)"
+	@echo "Service available at http://localhost:8082"
 	k6 run k6/scenario2-redis.js
 
 test-both:
 	@echo "Running both scenarios sequentially..."
 	@echo ""
-	@echo "=== Scenario 1: PostgreSQL Only (/v1) ==="
+	@echo "=== Scenario 1: PostgreSQL Only (500 VUs, 5 min) ==="
+	@echo "Service: http://localhost:8081"
 	k6 run k6/scenario1-rdb.js
 	@echo ""
 	@echo "Waiting 30 seconds before next scenario..."
-	sleep 30
+	@sleep 30
 	@echo ""
-	@echo "=== Scenario 2: PostgreSQL + Valkey (/v2) ==="
+	@echo "=== Scenario 2: PostgreSQL + Valkey (500 VUs, 5 min) ==="
+	@echo "Service: http://localhost:8082"
 	k6 run k6/scenario2-redis.js
 	@echo ""
-	@echo "Tests complete! Check Grafana for comparison."
-
-logs:
-	@echo "Showing logs for all leaderboard pods..."
-	kubectl logs -l app=leaderboard -n $(NAMESPACE) --tail=100 -f
-
-status:
-	@echo "=== Pods ==="
-	kubectl get pods -n $(NAMESPACE)
-	@echo ""
-	@echo "=== Services ==="
-	kubectl get svc -n $(NAMESPACE)
-
-restart-app:
-	kubectl rollout restart deployment/leaderboard-app -n $(NAMESPACE)
-
-rebuild-app:
-	docker build -t leaderboard-app:latest -f docker/Dockerfile.app .
-	k3d image import leaderboard-app:latest -c $(CLUSTER_NAME)
-	$(MAKE) restart-app
-	kubectl wait --for=condition=ready pod -l app=leaderboard --timeout=120s -n $(NAMESPACE)
+	@echo "=== Both scenarios completed ==="
 
 clean:
 	k3d cluster delete $(CLUSTER_NAME)

@@ -20,7 +20,7 @@ data:
     appendfsync everysec
     
     # 記憶體配置
-    maxmemory 2gb
+    maxmemory 400mb
     maxmemory-policy allkeys-lru
     
     # 效能優化
@@ -59,11 +59,11 @@ spec:
           mountPath: /data
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "500m"
+            memory: "256Mi"
+            cpu: "100m"
           limits:
-            memory: "4Gi"
-            cpu: "1000m"
+            memory: "512Mi"
+            cpu: "500m"
       volumes:
       - name: valkey-config
         configMap:
