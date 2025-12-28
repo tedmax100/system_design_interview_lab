@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Enable remote write receiver for Tempo metrics generator
+remote_write: []
+
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape the wallet service
+  - job_name: 'wallet-service'
+    static_configs:
+      - targets: ['wallet-service:9090']
+    scrape_interval: 5s
+
+  # Scrape NATS
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222']
+
+  # Scrape Tempo
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:3200']
+
+  # Scrape Loki
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']

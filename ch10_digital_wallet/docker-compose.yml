@@ -1,0 +1,151 @@
+services:
+  # Message Queue
+  nats:
+    image: nats:2.10-alpine
+    container_name: digital-wallet-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["-js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+  # Application
+  wallet-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: digital-wallet-service
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - PORT=8080
+      - METRICS_PORT=9090
+      - NATS_URL=nats://nats:4222
+      - EVENT_STORE_PATH=/data/events.log
+      - GIN_MODE=release
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - ENVIRONMENT=docker
+    volumes:
+      - wallet-data:/data
+    depends_on:
+      nats:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - wallet-network
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: digital-wallet-otel-collector
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - tempo
+      - loki
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+  # Tempo (Distributed Tracing)
+  tempo:
+    image: grafana/tempo:2.4.0
+    container_name: digital-wallet-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./config/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4327:4317"   # OTLP gRPC (different host port to avoid conflict)
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+  # Loki (Log Aggregation)
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: digital-wallet-loki
+    user: "0"  # Run as root to avoid permission issues
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./config/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/tmp/loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: digital-wallet-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9091:9090"
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: digital-wallet-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    restart: unless-stopped
+    networks:
+      - wallet-network
+
+networks:
+  wallet-network:
+    driver: bridge
+
+volumes:
+  wallet-data:
+  tempo-data:
+  loki-data:
+  prometheus-data:
+  grafana-data:
