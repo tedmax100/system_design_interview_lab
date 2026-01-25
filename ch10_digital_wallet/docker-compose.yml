@@ -1,7 +1,7 @@
 services:
   # Message Queue
   nats:
-    image: nats:2.10-alpine
+    image: nats:2.12-alpine
     container_name: digital-wallet-nats
     ports:
       - "4222:4222"
@@ -51,7 +51,7 @@ services:
 
   # OpenTelemetry Collector
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0
+    image: otel/opentelemetry-collector-contrib:0.144.0
     container_name: digital-wallet-otel-collector
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
@@ -69,8 +69,9 @@ services:
 
   # Tempo (Distributed Tracing)
   tempo:
-    image: grafana/tempo:2.4.0
+    image: grafana/tempo:2.9.0
     container_name: digital-wallet-tempo
+    user: "0"  # Run as root to avoid permission issues
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./config/tempo.yaml:/etc/tempo.yaml:ro
@@ -86,7 +87,7 @@ services:
 
   # Loki (Log Aggregation)
   loki:
-    image: grafana/loki:2.9.4
+    image: grafana/loki:3.6.0
     container_name: digital-wallet-loki
     user: "0"  # Run as root to avoid permission issues
     command: ["-config.file=/etc/loki/loki.yaml"]
@@ -101,7 +102,7 @@ services:
 
   # Prometheus (Metrics)
   prometheus:
-    image: prom/prometheus:v2.50.0
+    image: prom/prometheus:v3.8.0
     container_name: digital-wallet-prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yaml'
@@ -119,7 +120,7 @@ services:
 
   # Grafana (Visualization)
   grafana:
-    image: grafana/grafana:10.4.0
+    image: grafana/grafana:12.3.0
     container_name: digital-wallet-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
