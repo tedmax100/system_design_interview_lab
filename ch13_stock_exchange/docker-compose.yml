@@ -1,0 +1,65 @@
+services:
+  # Stock Exchange Service
+  exchange-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stock-exchange-service
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - PORT=8080
+      - METRICS_PORT=9090
+      - GIN_MODE=release
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - exchange-network
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    container_name: stock-exchange-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9091:9090"
+    restart: unless-stopped
+    networks:
+      - exchange-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: stock-exchange-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./config/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - exchange-network
+
+networks:
+  exchange-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
